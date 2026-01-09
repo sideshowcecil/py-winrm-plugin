@@ -268,6 +268,8 @@ retryconnectiondelay = 0
 certpath = None
 username = None
 winrmproxy = None
+clientcertpem = None
+clientcertprivpem = None
 
 if os.environ.get('RD_CONFIG_OVERRIDE') == 'true':
     override = True
@@ -318,6 +320,20 @@ else:
     if "RD_CONFIG_PASSWORD_STORAGE_PATH" in os.environ:
         password = os.getenv("RD_CONFIG_PASSWORD_STORAGE_PATH")
 
+if "RD_FILECOPIER_CLIENTCERTPEM" in os.environ and os.getenv("RD_FILECOPIER_CLIENTCERTPEM"):
+    log.debug('Using client cert pem from node definition: %s' % os.environ['RD_FILECOPIER_CLIENTCERTPEM'])
+    clientcertpem = os.getenv("RD_FILECOPIER_CLIENTCERTPEM").strip('\'')
+elif "RD_CONFIG_CLIENTCERTPEM" in os.environ and os.getenv("RD_CONFIG_CLIENTCERTPEM"):
+        log.debug('Using client cert pem from project definition: %s' % os.environ['RD_CONFIG_CLIENTCERTPEM'])
+        clientcertpem = os.getenv("RD_CONFIG_CLIENTCERTPEM").strip('\'')
+
+if "RD_FILECOPIER_CLIENTCERTPRIVPEM" in os.environ and os.getenv("RD_FILECOPIER_CLIENTCERTPRIVPEM"):
+    log.debug('Using client cert privpem from node definition')
+    clientcertprivpem = os.getenv("RD_FILECOPIER_CLIENTCERTPRIVPEM").strip('\'')
+elif "RD_CONFIG_CLIENTCERTPRIVPEM" in os.environ and os.getenv("RD_CONFIG_CLIENTCERTPRIVPEM"):
+        log.debug('Using client cert privpem from project definition')
+        clientcertprivpem = os.getenv("RD_CONFIG_CLIENTCERTPRIVPEM").strip('\'')
+
 quiet = True
 if "RD_CONFIG_DEBUG" in os.environ:
     quiet = False
@@ -356,7 +372,9 @@ if enabledHttpDebug:
     httpclient_logging_patch(logging.DEBUG)
 
 endpoint = transport+'://'+args.hostname+':'+port
-arguments = {"transport": authentication}
+
+arguments = {}
+arguments["transport"] = authentication
 
 if(nossl == True):
     arguments["server_cert_validation"] = "ignore"
@@ -405,6 +423,21 @@ if authentication == "kerberos":
     k5bConfig.get_ticket()
     arguments["kerberos_delegation"] = krbdelegation
 
+if authentication == "certificate":
+    # save certificates in temporary files
+    import tempfile
+    with tempfile.NamedTemporaryFile(prefix="winrm-certpem", delete=False) as fp:
+        fp.write(clientcertpem.encode())
+        certpem = fp.name
+    with tempfile.NamedTemporaryFile(prefix="winrm-certkeypem", delete=False) as fp:
+        fp.write(clientcertprivpem.encode())
+        certkeypem = fp.name
+    arguments["cert_pem"] = certpem
+    arguments["cert_key_pem"] = certkeypem
+    # unset username and password as they are no longer required
+    username = None
+    password = None
+
 session = winrm.Session(target=endpoint,
                         auth=(username, password),
                         **arguments)
@@ -440,3 +473,7 @@ if not os.path.isdir(args.source):
 else:
     log.warn("The source is a directory, skipping copy")
 
+if authentication == "certificate":
+    # cleanup temporary files
+    os.remove(certpem)
+    os.remove(certkeypem)

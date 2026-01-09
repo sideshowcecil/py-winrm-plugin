@@ -72,6 +72,7 @@ The transport methods supported are:
 * kerberos
 * ntlm
 * credssp
+* credentials
 
 Further information [here](https://github.com/diyan/pywinrm#valid-transport-options)
 

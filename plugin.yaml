@@ -24,17 +24,17 @@ providers:
     config:
       - name: interpreter
         title: Python Interpreter
-        description: "Python Interpreter (Default: python)"
+        description: "Python Interpreter (Default: python3)"
         type: Select
         values: "python,python2,python3"
-        default: "python"
+        default: "python3"
         required: true
         scope: Instance
       - name: authtype
         title: Authentication Type
         description: "Authentication Type. It can be overwriting at node level using `winrm-authtype`"
         type: Select
-        values: "basic,credssp,ntlm,kerberos"
+        values: "basic,certificate,credssp,ntlm,kerberos"
         default: "basic"
         required: true
         scope: Instance
@@ -159,6 +159,30 @@ providers:
           valueConversion: "STORAGE_PATH_AUTOMATIC_READ"
           storage-path-root: "keys"
           instance-scope-node-attribute: "winrm-password-storage-path"
+      - name: clientcertprivpem
+        title: Client Certificate Private Key Path
+        type: String
+        required: false
+        description: "Optional storage client certificate private key path. Can contain property references to node attributes. A node attribute named winrm-client-cert-priv-pem-storage-path will override this value."
+        scope: Instance
+        renderingOptions:
+          groupName: Authentication
+          selectionAccessor: "STORAGE_PATH"
+          valueConversion: "STORAGE_PATH_AUTOMATIC_READ"
+          storage-path-root: "keys"
+          instance-scope-node-attribute: "winrm-client-cert-priv-pem-storage-path"
+      - name: clientcertpem
+        title: Client Certificate Public Key Path
+        type: String
+        required: false
+        description: "Optional storage client certificate public key path. Can contain property references to node attributes. A node attribute named winrm-client-cert-pem-storage-path will override this value."
+        scope: Instance
+        renderingOptions:
+          groupName: Authentication
+          selectionAccessor: "STORAGE_PATH"
+          valueConversion: "STORAGE_PATH_AUTOMATIC_READ"
+          storage-path-root: "keys"
+          instance-scope-node-attribute: "winrm-client-cert-pem-storage-path"
       - name: krb5config
         title: krb5 Config File
         description: "Path of krb5.conf file"
@@ -233,17 +257,17 @@ providers:
     config:
       - name: interpreter
         title: Python Interpreter
-        description: "Python Interpreter (Default: python)"
+        description: "Python Interpreter (Default: python3)"
         type: Select
         values: "python,python2,python3"
-        default: "python"
+        default: "python3"
         required: true
         scope: Instance
       - name: authtype
         title: Authentication Type
         description: "Authentication Type. It can be overwriting at node level using `winrm-authtype`"
         type: Select
-        values: "basic,credssp,ntlm,kerberos"
+        values: "basic,certificate,credssp,ntlm,kerberos"
         default: "basic"
         required: true
         scope: Instance
@@ -339,6 +363,30 @@ providers:
           valueConversion: "STORAGE_PATH_AUTOMATIC_READ"
           storage-path-root: "keys"
           instance-scope-node-attribute: "winrm-password-storage-path"
+      - name: clientcertprivpem
+        title: Client Certificate Private Key Path
+        type: String
+        required: false
+        description: "Optional storage client certificate private key path. Can contain property references to node attributes. A node attribute named winrm-client-cert-priv-pem-storage-path will override this value."
+        scope: Instance
+        renderingOptions:
+          groupName: Authentication
+          selectionAccessor: "STORAGE_PATH"
+          valueConversion: "STORAGE_PATH_AUTOMATIC_READ"
+          storage-path-root: "keys"
+          instance-scope-node-attribute: "winrm-client-cert-priv-pem-storage-path"
+      - name: clientcertpem
+        title: Client Certificate Public Key Path
+        type: String
+        required: false
+        description: "Optional storage client certificate public key path. Can contain property references to node attributes. A node attribute named winrm-client-cert-pem-storage-path will override this value."
+        scope: Instance
+        renderingOptions:
+          groupName: Authentication
+          selectionAccessor: "STORAGE_PATH"
+          valueConversion: "STORAGE_PATH_AUTOMATIC_READ"
+          storage-path-root: "keys"
+          instance-scope-node-attribute: "winrm-client-cert-pem-storage-path"
       - type: Boolean
         name: debug
         title: Debug?
@@ -417,14 +465,14 @@ providers:
     plugin-type: script
     script-interpreter: ${config.interpreter} -u
     script-file: winrm-check.py
-    script-args: --username ${config.username} --hostname ${config.hostname} --password ${config.password_storage_path} --authentication ${config.authtype} --transport ${config.winrmtransport} --port ${config.winrmport} --nossl ${config.nossl} --debug ${config.debug} --certpath ${config.certpath}
+    script-args: --username "${config.username}" --hostname ${config.hostname} --password "${config.password_storage_path}" --authentication ${config.authtype} --transport ${config.winrmtransport} --port ${config.winrmport} --nossl ${config.nossl} --debug ${config.debug} --certpath ${config.certpath} --clientcertpem ${config.clientcertpath} --clientcertprivpem ${config.clientcertprivpath}
     config:
       - name: interpreter
         title: Python Interpreter
-        description: "Python Interpreter (Default: python)"
+        description: "Python Interpreter (Default: python3)"
         type: Select
         values: "python,python2,python3"
-        default: "python"
+        default: "python3"
         required: true
         scope: Instance
       - name: hostname
@@ -436,7 +484,7 @@ providers:
         title: Authentication Type
         description: "Authentication Type"
         type: Select
-        values: "basic,credssp,ntlm,kerberos"
+        values: "basic,certificate,credssp,ntlm,kerberos"
         default: "basic"
         required: true
       - name: winrmtransport
@@ -485,6 +533,16 @@ providers:
           selectionAccessor: "STORAGE_PATH"
           valueConversion: "STORAGE_PATH_AUTOMATIC_READ"
           storage-path-root: "keys"
+      - name: clientcertprivpath
+        title: Client Certificate Private Key Path
+        description: "Optional client certificate private key path."
+        type: String
+        required: false
+      - name: clientcertpath
+        title: Client Certificate Public Key Path
+        description: "Optional client certificate public key path."
+        type: String
+        required: false
       - type: Boolean
         name: debug
         title: Debug?

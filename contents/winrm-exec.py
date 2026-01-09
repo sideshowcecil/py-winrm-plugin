@@ -139,6 +139,8 @@ retryconnection = 1
 retryconnectiondelay = 0
 username = None
 winrmproxy = None
+clientcertpem = None
+clientcertprivpem = None
 
 if "RD_CONFIG_AUTHTYPE" in os.environ:
     authentication = os.getenv("RD_CONFIG_AUTHTYPE")
@@ -234,6 +236,20 @@ else:
         log.debug('Using password from node')
         password = os.getenv("RD_CONFIG_PASSWORD_STORAGE_PATH")
 
+if "RD_NODEEXECUTOR_CLIENTCERTPEM" in os.environ and os.getenv("RD_NODEEXECUTOR_CLIENTCERTPEM"):
+    log.debug('Using client cert pem from node definition: %s' % os.environ['RD_NODEEXECUTOR_CLIENTCERTPEM'])
+    clientcertpem = os.getenv("RD_NODEEXECUTOR_CLIENTCERTPEM").strip('\'')
+elif "RD_CONFIG_CLIENTCERTPEM" in os.environ and os.getenv("RD_CONFIG_CLIENTCERTPEM"):
+        log.debug('Using client cert pem from project definition: %s' % os.environ['RD_CONFIG_CLIENTCERTPEM'])
+        clientcertpem = os.getenv("RD_CONFIG_CLIENTCERTPEM").strip('\'')
+
+if "RD_NODEEXECUTOR_CLIENTCERTPRIVPEM" in os.environ and os.getenv("RD_NODEEXECUTOR_CLIENTCERTPRIVPEM"):
+    log.debug('Using client cert privpem from node definition')
+    clientcertprivpem = os.getenv("RD_NODEEXECUTOR_CLIENTCERTPRIVPEM").strip('\'')
+elif "RD_CONFIG_CLIENTCERTPRIVPEM" in os.environ and os.getenv("RD_CONFIG_CLIENTCERTPRIVPEM"):
+        log.debug('Using client cert privpem from project definition')
+        clientcertprivpem = os.getenv("RD_CONFIG_CLIENTCERTPRIVPEM").strip('\'')
+
 if "RD_CONFIG_KRB5CONFIG" in os.environ:
     krb5config = os.getenv("RD_CONFIG_KRB5CONFIG")
 
@@ -254,7 +270,8 @@ if "RD_NODE_OUTPUT_CHARSET" in os.environ:
 log.debug("------------------------------------------")
 log.debug("endpoint:" + endpoint)
 log.debug("authentication:" + authentication)
-log.debug("username:" + username)
+log.debug("username:" + str(username))
+log.debug("clientcertpem:" + str(clientcertpem))
 log.debug("nossl:" + str(nossl))
 log.debug("diabletls12:" + str(diabletls12))
 log.debug("krb5config:" + str(krb5config))
@@ -324,6 +341,21 @@ if authentication == "kerberos":
     k5bConfig.get_ticket()
     arguments["kerberos_delegation"] = krbdelegation
 
+if authentication == "certificate":
+    # save certificates in temporary files
+    import tempfile
+    with tempfile.NamedTemporaryFile(prefix="winrm-certpem", delete=False) as fp:
+        fp.write(clientcertpem.encode())
+        certpem = fp.name
+    with tempfile.NamedTemporaryFile(prefix="winrm-certkeypem", delete=False) as fp:
+        fp.write(clientcertprivpem.encode())
+        certkeypem = fp.name
+    arguments["cert_pem"] = certpem
+    arguments["cert_key_pem"] = certkeypem
+    # unset username and password as they are no longer required
+    username = None
+    password = None
+
 session = winrm.Session(target=endpoint,
                         auth=(username, password),
                         **arguments)
@@ -372,6 +404,11 @@ sys.stdout.seek(0)
 sys.stderr.seek(0)
 sys.stdout = realstdout
 sys.stderr = realstderr
+
+if authentication == "certificate":
+    # cleanup temporary files
+    os.remove(certpem)
+    os.remove(certkeypem)
 
 if exitBehaviour == 'console':
     if tsk.e_std:
